@@ -35,7 +35,9 @@ async function boundedJson(response: globalThis.Response): Promise<unknown> {
 
 export const TYPESAFE_BASE_URL = 'https://api.typesafe.ai';
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api';
+export const OPENJEV_BASE_URL = 'https://api.openjev.sh';
 export const DEFAULT_MODEL = 'jev-latest';
+export const OPENJEV_MODEL = 'openjev';
 export const DEFAULT_TIMEOUT_MS = 45_000;
 const MAX_TIMEOUT_MS = 3_600_000;
 /** Review requests in flight at once unless JEV_CONCURRENCY or the configuration file sets another limit. */
@@ -44,7 +46,7 @@ const MAX_CONCURRENCY = 16;
 const MAX_ATTEMPTS = 3;
 const RETRYABLE_STATUSES = [429, 500, 502, 503, 504, 529];
 /** Environment variables that select the provider, credential, model, request timeout, and request concurrency. */
-export const PROVIDER_ENVIRONMENT = ['JEV_API_KEY', 'TYPESAFE_API_KEY', 'OPENROUTER_API_KEY', 'TYPESAFE_BASE_URL', 'JEV_MODEL', 'JEV_TIMEOUT_MS', 'JEV_CONCURRENCY'] as const;
+export const PROVIDER_ENVIRONMENT = ['JEV_PROVIDER', 'JEV_API_KEY', 'TYPESAFE_API_KEY', 'OPENROUTER_API_KEY', 'OPENJEV_API_KEY', 'TYPESAFE_BASE_URL', 'JEV_MODEL', 'JEV_TIMEOUT_MS', 'JEV_CONCURRENCY'] as const;
 
 export type JevSettings = { apiKey: string; baseUrl: string; model: string; timeoutMs: number; concurrency: number };
 /** Model, request timeout, and request concurrency from the project configuration file; the environment overrides each. */
@@ -58,18 +60,38 @@ export const requestConcurrencySchema = z.number().int().positive().max(MAX_CONC
  * OpenRouter key. OpenRouter serves TypeSafe's System One API, so only the base URL differs.
  * An explicit TYPESAFE_BASE_URL always wins. The credential and endpoint come only from the environment;
  * the configured model, request timeout, and request concurrency apply when the environment does not set them.
+ *
+ * OpenJEV is a free community gateway to the same Jev model. Set JEV_PROVIDER=openjev to use it
+ * explicitly, or set only OPENJEV_API_KEY (with no TypeSafe or OpenRouter key) to select it automatically.
+ * TypeSafe stays the default: anyone with a TypeSafe key sees zero behaviour change.
  */
 export function jevSettings(env: NodeJS.ProcessEnv = process.env, configured: ConfiguredJevSettings = {}): JevSettings {
+  const provider = env.JEV_PROVIDER?.trim().toLowerCase();
   const typesafeKey = env.JEV_API_KEY?.trim() || env.TYPESAFE_API_KEY?.trim();
   const openRouterKey = env.OPENROUTER_API_KEY?.trim();
+  const openjevKey = env.OPENJEV_API_KEY?.trim();
+  const timeoutMs = wholeNumber(env.JEV_TIMEOUT_MS, MAX_TIMEOUT_MS, `JEV_TIMEOUT_MS must be a whole number of milliseconds from 1 to ${MAX_TIMEOUT_MS}.`)
+    ?? configured.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const concurrency = wholeNumber(env.JEV_CONCURRENCY, MAX_CONCURRENCY, `JEV_CONCURRENCY must be a whole number from 1 to ${MAX_CONCURRENCY}.`)
+    ?? configured.concurrency ?? DEFAULT_CONCURRENCY;
+
+  // OpenJEV: explicit JEV_PROVIDER=openjev, or no TypeSafe/OpenRouter key but OPENJEV_API_KEY is set.
+  const usingOpenjev = provider === 'openjev' || (!provider && !typesafeKey && !openRouterKey && !!openjevKey);
+  if (usingOpenjev) {
+    return {
+      apiKey: openjevKey || typesafeKey || openRouterKey || '',
+      baseUrl: env.TYPESAFE_BASE_URL?.trim() || OPENJEV_BASE_URL,
+      model: env.JEV_MODEL?.trim() || configured.model || OPENJEV_MODEL,
+      timeoutMs, concurrency,
+    };
+  }
+
+  // TypeSafe (default) or OpenRouter: unchanged.
   return {
     apiKey: typesafeKey || openRouterKey || '',
     baseUrl: env.TYPESAFE_BASE_URL?.trim() || (!typesafeKey && openRouterKey ? OPENROUTER_BASE_URL : TYPESAFE_BASE_URL),
     model: env.JEV_MODEL?.trim() || configured.model || DEFAULT_MODEL,
-    timeoutMs: wholeNumber(env.JEV_TIMEOUT_MS, MAX_TIMEOUT_MS, `JEV_TIMEOUT_MS must be a whole number of milliseconds from 1 to ${MAX_TIMEOUT_MS}.`)
-      ?? configured.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    concurrency: wholeNumber(env.JEV_CONCURRENCY, MAX_CONCURRENCY, `JEV_CONCURRENCY must be a whole number from 1 to ${MAX_CONCURRENCY}.`)
-      ?? configured.concurrency ?? DEFAULT_CONCURRENCY,
+    timeoutMs, concurrency,
   };
 }
 
@@ -107,7 +129,7 @@ export class Jev implements Evaluator, TypedEvaluator {
   readonly model: string;
   readonly endpoint: string;
   constructor(private options: { apiKey: string; model?: string; baseUrl?: string; fetch?: typeof fetch; signal?: AbortSignal; timeoutMs?: number }) {
-    if (!options.apiKey.trim()) throw new Error('Set JEV_API_KEY, TYPESAFE_API_KEY, or OPENROUTER_API_KEY to run review, verify, or assess. Preview works without a key.');
+    if (!options.apiKey.trim()) throw new Error('Set JEV_API_KEY, TYPESAFE_API_KEY, OPENJEV_API_KEY, or OPENROUTER_API_KEY to run review, verify, or assess. Preview works without a key.');
     this.model = options.model ?? DEFAULT_MODEL;
     this.endpoint = systemOneEndpoint(options.baseUrl ?? TYPESAFE_BASE_URL);
   }

@@ -230,10 +230,11 @@ Exit codes:
   130  Interrupted with Ctrl-C (SIGINT).
 
 Preview and compare are local. Review, verify, and assess send bounded evidence to Jev and
-require JEV_API_KEY or TYPESAFE_API_KEY (TypeSafe), or OPENROUTER_API_KEY (OpenRouter); they
-check for a key after reading their input files and before collecting from the repository.
-Optional TYPESAFE_BASE_URL overrides the endpoint base URL. Optional JEV_MODEL selects the model
-(default: jev-latest). Optional JEV_TIMEOUT_MS limits each Jev request (default: 45000).
+require JEV_API_KEY or TYPESAFE_API_KEY (TypeSafe), OPENJEV_API_KEY (OpenJEV), or OPENROUTER_API_KEY
+(OpenRouter); they check for a key after reading their input files and before collecting from the repository.
+Optional TYPESAFE_BASE_URL overrides the endpoint base URL. Optional JEV_PROVIDER selects the provider
+explicitly (openjev, typesafe, or openrouter). Optional JEV_MODEL selects the model
+(default: jev-latest for TypeSafe/OpenRouter, openjev for OpenJEV). Optional JEV_TIMEOUT_MS limits each Jev request (default: 45000).
 Optional JEV_CONCURRENCY sets how many review requests run at once (default: 4, at most 16).
 Each change packet receives an individual bounded quality assessment. Automatic
 source-anchored checks cover three JS/TS patterns; no code or tests are executed.

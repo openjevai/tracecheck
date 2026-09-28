@@ -163,7 +163,7 @@ async function run(runArgs: string[]): Promise<void> {
   }
 
   const settings = jevSettings();
-  if (!settings.apiKey) throw new Error('Set JEV_API_KEY, TYPESAFE_API_KEY, or OPENROUTER_API_KEY for a live run.');
+  if (!settings.apiKey) throw new Error('Set JEV_API_KEY, TYPESAFE_API_KEY, OPENJEV_API_KEY, or OPENROUTER_API_KEY for a live run.');
   const out = resolve(values.out ?? join('.tracecheck', 'calibration', new Date().toISOString().replace(/[:.]/g, '-')));
   await mkdir(out, { recursive: true, mode: 0o700 });
   const rawPath = join(out, 'raw.jsonl');

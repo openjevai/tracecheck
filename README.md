@@ -16,7 +16,9 @@ Your agent investigates the code. Tracecheck checks its hypotheses against the e
 
 Tracecheck helps your coding agent challenge suspected defects against source evidence. The agent discovers concerns, follows callers, checks contracts and counterevidence, and decides what to fix. Tracecheck validates references and asks Jev for typed support, impact, and missing-evidence judgments. Optional broad assessments cover 19 quality dimensions and local checkpoint comparisons.
 
-Run it as a **local MCP server** or use the **CLI** directly. Live assessments send code context, using your API key, to the configured provider: TypeSafe or OpenRouter. Tracecheck has no hosted application backend and does not edit or execute the code being reviewed.
+Run it as a **local MCP server** or use the **CLI** directly. Live assessments send code context, using your API key, to the configured provider: TypeSafe, OpenRouter, or OpenJEV. Tracecheck has no hosted application backend and does not edit or execute the code being reviewed.
+
+> **OpenJEV support:** Jev is built by [TypeSafe](https://typesafe.ai). This fork keeps TypeSafe as the default and adds optional support for [OpenJEV](https://openjev.sh), a free community gateway to the same Jev model — set `OPENJEV_API_KEY` (or `JEV_PROVIDER=openjev`) to use it. Original project: https://github.com/bmccarn/tracecheck by @bmccarn.
 
 > **Status:** Version 0.4.0 is the current release. This README describes the `main` branch. Changes listed under *Unreleased* in the [changelog](CHANGELOG.md) ship in the next release, and this README marks the options and settings they add as "Not in 0.4.0". Real-project accuracy calibration, broader source checks, and executable fix verification are in progress or planned. See [validation evidence](docs/validation.md) for what has actually been tested.
 
@@ -111,6 +113,10 @@ export TYPESAFE_API_KEY="your-key"
 # JEV_API_KEY is also supported and takes precedence if both are set.
 # Without a TypeSafe key, an OpenRouter key routes requests through OpenRouter.
 # export OPENROUTER_API_KEY="your-openrouter-key"
+# OpenJEV is a free community gateway to the same Jev model.
+# Set OPENJEV_API_KEY to use it when no TypeSafe key is set, or force it with JEV_PROVIDER=openjev.
+# export OPENJEV_API_KEY="your-openjev-key"
+# export JEV_PROVIDER="openjev"
 ```
 
 ### Run a first review
@@ -363,7 +369,7 @@ Configure your MCP client with one of these launch commands:
 | Command | `npx` | `node` |
 | Arguments | `--yes`, `@bmccarn/tracecheck@0.4.0`, `mcp` | `/absolute/path/to/tracecheck/dist/plugin.mjs`, `mcp` |
 
-Forward `TYPESAFE_API_KEY` or `JEV_API_KEY`, and optionally `JEV_MODEL`, to the server. The server also reads `OPENROUTER_API_KEY`, `TYPESAFE_BASE_URL`, `JEV_TIMEOUT_MS`, and `JEV_CONCURRENCY`; 0.3.0 does not.
+Forward `TYPESAFE_API_KEY` or `JEV_API_KEY`, and optionally `JEV_MODEL`, to the server. The server also reads `OPENROUTER_API_KEY`, `OPENJEV_API_KEY`, `JEV_PROVIDER`, `TYPESAFE_BASE_URL`, `JEV_TIMEOUT_MS`, and `JEV_CONCURRENCY`; 0.3.0 does not.
 
 Append `--repo`, `/absolute/path/to/reviewed/repo` to bind the server to one repository. Otherwise, collection-tool calls must provide `repo`. A bound server accepts a `repo` argument that names its repository or any directory in it (0.3.0 accepted only the exact path) and rejects any other repository, including one nested inside it. GUI applications may not inherit variables exported in `.zshrc`; use your client's environment configuration.
 
@@ -404,8 +410,10 @@ The [publishing guide](docs/publishing.md) covers release-candidate testing, sta
 | `TYPESAFE_API_KEY` | Required unless `JEV_API_KEY` or `OPENROUTER_API_KEY` is set | TypeSafe authentication. |
 | `JEV_API_KEY` | Unset | Alternative key name; takes precedence. |
 | `OPENROUTER_API_KEY` | Unset | OpenRouter authentication. Used only when no TypeSafe key is set, and then requests go to OpenRouter. |
-| `TYPESAFE_BASE_URL` | `https://api.typesafe.ai`, or `https://openrouter.ai/api` when only an OpenRouter key is set | Base URL of a System One API. Tracecheck appends `/v1/systemone`. It must use HTTPS unless the host is loopback, and it must not contain credentials, a query, or a fragment. |
-| `JEV_MODEL` | `jev-latest` | Model selection. Use an available concrete version for repeatable evaluations. |
+| `OPENJEV_API_KEY` | Unset | OpenJEV authentication. Used when no TypeSafe or OpenRouter key is set, or when `JEV_PROVIDER=openjev`. |
+| `JEV_PROVIDER` | Unset | Explicit provider selection: `openjev`, `typesafe`, or `openrouter`. When unset, the key precedence above decides. |
+| `TYPESAFE_BASE_URL` | `https://api.typesafe.ai`, or `https://openrouter.ai/api` when only an OpenRouter key is set, or `https://api.openjev.sh` when only an OpenJEV key is set | Base URL of a System One API. Tracecheck appends `/v1/systemone`. It must use HTTPS unless the host is loopback, and it must not contain credentials, a query, or a fragment. |
+| `JEV_MODEL` | `jev-latest` for TypeSafe/OpenRouter, `openjev` for OpenJEV | Model selection. Use an available concrete version for repeatable evaluations. |
 | `JEV_TIMEOUT_MS` | `45000` | Time limit for one Jev request, in milliseconds, including its retries. A whole number from 1 to 3,600,000. The overall review deadline still applies. |
 | `JEV_CONCURRENCY` | `4` | Most review requests in flight at once. A whole number from 1 to 16. Lower it if the provider rate-limits your account. Reports do not depend on it. |
 
@@ -471,6 +479,18 @@ OpenRouter serves Jev through a [System One API](https://openrouter.ai/docs/guid
 `JEV_MODEL` takes the same bare IDs as TypeSafe, such as `jev-latest`, and OpenRouter routes them to its `typesafe/` models. Reports record the model ID that OpenRouter returns, for example `typesafe/jev-1.13-20260917`. OpenRouter bills these requests to your OpenRouter account, and review context passes through OpenRouter on its way to TypeSafe.
 
 OpenRouter lists a 32,000-token context for Jev. When a request exceeds the provider's limit, Tracecheck gives the same "split the review" guidance it gives for TypeSafe.
+
+### Using Jev through OpenJEV
+
+[OpenJEV](https://openjev.sh) is a free community gateway to the same Jev model built by TypeSafe. It uses the same System One API contract, so Tracecheck works with it unchanged. Set `OPENJEV_API_KEY` to use it when no TypeSafe or OpenRouter key is set, or force it explicitly with `JEV_PROVIDER=openjev`:
+
+```sh
+export OPENJEV_API_KEY="your-openjev-key"
+# Optional: force OpenJEV even when a TypeSafe key is also set.
+# export JEV_PROVIDER="openjev"
+```
+
+When OpenJEV is selected, the default model is `openjev` (override it with `JEV_MODEL`). TypeSafe stays the default: anyone with a TypeSafe key sees zero behaviour change.
 
 ### Collection limits
 

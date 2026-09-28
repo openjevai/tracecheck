@@ -178,7 +178,7 @@ export function createServer(repo?: string, evaluatorFactory?: (signal: AbortSig
     return toolResult(output);
   });
   server.registerTool('tracecheck_review', {
-    description: 'Review all previewed change packets with bounded evidence and individual packet quality assessments using Jev. Sends collected source and base versions to the configured provider: TypeSafe, OpenRouter, or the endpoint in TYPESAFE_BASE_URL. Optional previousEvaluation is compared only for a single-packet quality result. Never edits or executes code.',
+    description: 'Review all previewed change packets with bounded evidence and individual packet quality assessments using Jev. Sends collected source and base versions to the configured provider: TypeSafe, OpenRouter, OpenJEV, or the endpoint in TYPESAFE_BASE_URL. Optional previousEvaluation is compared only for a single-packet quality result. Never edits or executes code.',
     inputSchema: z.object({ ...scope, reviewTimeoutMs: reviewTimeoutSchema.optional().describe(`Maximum review duration in milliseconds. Defaults to ${CONFIG_FILE}, then 300000.`),
       maxRequests: maxRequestsSchema.optional().describe(`Most provider requests this review may make; a larger review is refused before any request. Defaults to ${CONFIG_FILE}, which may only lower it, then ${DEFAULT_MAX_REQUESTS}. Compare with the preview estimate.`),
       previousEvaluation: previousEvaluationSchema.optional(), snapshot: z.string().length(64).describe('Snapshot returned by tracecheck_preview. A changed snapshot is rejected.') }),

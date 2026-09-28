@@ -55,7 +55,7 @@ This route reads no additional files. Include callers or tests yourself where th
 
 ## Recovery and completion
 
-- Missing credentials: explain which launching environment needs `TYPESAFE_API_KEY`, `JEV_API_KEY`, or `OPENROUTER_API_KEY`. Never request the key in chat or write it to project files.
+- Missing credentials: explain which launching environment needs `TYPESAFE_API_KEY`, `JEV_API_KEY`, `OPENJEV_API_KEY`, or `OPENROUTER_API_KEY`. Never request the key in chat or write it to project files.
 - Unavailable tools: report that Tracecheck is not connected. Use its installed CLI if available, or continue the project's ordinary checks and disclose that no Jev assessment ran.
 - Cursor setup or connection failure: inspect Cursor's **Output** panel → **MCP Logs**, then recheck the `mcp.json` stdio entry, the credential variable in Cursor's launching environment, and the complete `tracecheck` skill directory.
 - Budget or coverage gaps: reduce unrelated context while retaining contracts and dependencies. Explicitly list any scope left unreviewed.
